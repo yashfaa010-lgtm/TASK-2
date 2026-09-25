@@ -20,10 +20,10 @@ Players X and O share one screen and take turns tapping a square. The first to g
 Open `index.html` in a browser. No build step.
 
 ## Screenshots
-**Screenshot 1: **
+**Screenshot 1:**
 <img width="1885" height="910" alt="image" src="https://github.com/user-attachments/assets/f9fbf7f6-f125-4d7e-9e85-0b16282c9fb8" />
 
-**Screenshot 2: **
+**Screenshot 2:**
 <img width="1887" height="893" alt="image" src="https://github.com/user-attachments/assets/b9898f9c-cf84-4320-bef0-11d1076756cd" />
 
 
