@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Neon Tic Tac Toe | Two-player game</title>
+    <meta name="description"
+        content="A neon-styled Tic Tac Toe game in plain JavaScript: two players or vs an unbeatable CPU, with sound, confetti and a scoreboard.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0A0414;
+            --x: #FFE14D;
+            --o: #FF3EA5;
+            --c: #2BE3FF;
+            --ink: #F3EEFF;
+            --mut: #9A8DBB
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+            color: var(--ink);
+            font: 1rem/1.5 Orbitron, ui-monospace, Consolas, monospace;
+            background: radial-gradient(600px 400px at 50% 0, rgba(255, 62, 165, .22), transparent), radial-gradient(500px 400px at 100% 100%, rgba(43, 227, 255, .18), transparent), var(--bg);
+            overflow-x: hidden
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .03) 0 1px, transparent 1px 3px)
+        }
+
+        #fx {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5
+        }
+
+        main {
+            width: min(94vw, 460px);
+            text-align: center;
+            position: relative
+        }
+
+        h1 {
+            margin: 0 0 .3rem;
+            font-size: clamp(1.7rem, 8vw, 2.4rem);
+            font-weight: 800;
+            letter-spacing: .06em;
+            color: #fff;
+            text-shadow: 0 0 8px var(--c), 0 0 24px var(--c), 0 0 48px var(--o)
+        }
+
+        .rules {
+            color: var(--mut);
+            margin: 0 0 1rem;
+            font-size: .75rem;
+            line-height: 1.6
+        }
+
+        .modes {
+            display: flex;
+            gap: .5rem;
+            margin-bottom: 1rem
+        }
+
+        .modes button,
+        .actions button {
+            flex: 1;
+            padding: .7rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, .2);
+            background: rgba(255, 255, 255, .05);
+            color: var(--ink);
+            font: 500 .78rem Orbitron, monospace;
+            cursor: pointer;
+            transition: background .2s, box-shadow .2s
+        }
+
+        .modes button:hover,
+        .actions button:hover {
+            background: rgba(255, 255, 255, .12)
+        }
+
+        .modes button[aria-pressed=true] {
+            background: var(--c);
+            color: #06121A;
+            box-shadow: 0 0 20px var(--c);
+            border-color: var(--c)
+        }
+
+        #snd {
+            flex: 0 0 3.2rem
+        }
+
+        .score {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: .5rem;
+            margin-bottom: 1rem
+        }
+
+        .score div {
+            border: 1px solid rgba(255, 255, 255, .15);
+            border-radius: 12px;
+            padding: .5rem;
+            font-size: .7rem;
+            color: var(--mut);
+            transition: box-shadow .3s, border-color .3s
+        }
+
+        .score b {
+            display: block;
+            font-size: 1.6rem;
+            color: var(--ink)
+        }
+
+        .score .ax {
+            border-color: var(--x);
+            box-shadow: 0 0 18px rgba(255, 225, 77, .5)
+        }
+
+        .score .ao {
+            border-color: var(--o);
+            box-shadow: 0 0 18px rgba(255, 62, 165, .5)
+        }
+
+        #status {
+            font-size: 1rem;
+            font-weight: 800;
+            min-height: 1.8em;
+            margin: 0 0 1rem
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(255, 255, 255, .14);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .04);
+            cursor: pointer;
+            padding: 0;
+            transition: background .2s, box-shadow .2s, transform .2s
+        }
+
+        .cell:hover:not(:disabled) {
+            background: rgba(43, 227, 255, .1);
+            box-shadow: 0 0 22px rgba(43, 227, 255, .4);
+            transform: scale(1.04)
+        }
+
+        .cell:disabled {
+            cursor: default
+        }
+
+        .cell svg {
+            width: 64%;
+            height: 64%;
+            fill: none;
+            stroke-width: 9;
+            stroke-linecap: round;
+            filter: drop-shadow(0 0 8px currentColor)
+        }
+
+        .cell.X {
+            color: var(--x)
+        }
+
+        .cell.O {
+            color: var(--o)
+        }
+
+        .cell svg * {
+            stroke: currentColor;
+            stroke-dasharray: 200;
+            stroke-dashoffset: 200;
+            animation: draw .35s ease-out forwards
+        }
+
+        @keyframes draw {
+            to {
+                stroke-dashoffset: 0
+            }
+        }
+
+        .cell.win {
+            animation: pulse .7s ease-in-out infinite alternate;
+            background: rgba(255, 255, 255, .1)
+        }
+
+        @keyframes pulse {
+            to {
+                box-shadow: 0 0 32px currentColor;
+                transform: scale(1.06)
+            }
+        }
+
+        .actions {
+            display: flex;
+            gap: .5rem;
+            margin-top: 1rem
+        }
+
+        :focus-visible {
+            outline: 3px solid #fff;
+            outline-offset: 2px
+        }
+
+        /* Laptop / desktop: give the board a little more room */
+        @media (min-width:900px) {
+            main {
+                width: min(90vw, 520px)
+            }
+
+            h1 {
+                font-size: 2.7rem
+            }
+
+            .cell svg {
+                width: 58%;
+                height: 58%
+            }
+        }
+
+        /* Tablet */
+        @media (min-width:601px) and (max-width:899px) {
+            main {
+                width: min(80vw, 480px)
+            }
+        }
+
+        /* Phone */
+        @media (max-width:600px) {
+            main {
+                width: 100%
+            }
+
+            h1 {
+                font-size: 1.6rem
+            }
+
+            .rules {
+                font-size: .7rem
+            }
+
+            .modes {
+                flex-wrap: wrap
+            }
+
+            .modes button,
+            .actions button {
+                font-size: .7rem;
+                padding: .6rem .4rem
+            }
+
+            #snd {
+                flex: 1 1 100%;
+                order: 3
+            }
+
+            .score div {
+                font-size: .62rem;
+                padding: .4rem
+            }
+
+            .score b {
+                font-size: 1.25rem
+            }
+
+            #board {
+                gap: 7px
+            }
+
+            .cell {
+                border-radius: 12px
+            }
+        }
+
+        @media (max-width:340px) {
+            .score {
+                grid-template-columns: 1fr 1fr;
+                row-gap: .5rem
+            }
+
+            .score div:nth-child(2) {
+                order: 3;
+                grid-column: 1/-1
+            }
+        }
+
+        @media (prefers-reduced-motion:reduce) {
+            * {
+                animation: none !important;
+                transition: none !important
+            }
+
+            .cell svg * {
+                stroke-dashoffset: 0
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="fx" aria-hidden="true"></canvas>
+    <main>
+        <h1>TIC TAC TOE</h1>
+        <p class="rules">Tap a square on your turn. Get three in a row to win. Play a friend on one screen, or take on
+            the CPU.</p>
+        <div class="modes">
+            <button id="m2" aria-pressed="true">2 Players</button>
+            <button id="mc" aria-pressed="false">vs CPU</button>
+            <button id="snd" aria-label="Sound on" aria-pressed="true">&#128266;</button>
+        </div>
+        <div class="score" aria-label="Scoreboard">
+            <div id="cx">Player X<b id="sx">0</b></div>
+            <div>Draws<b id="sd">0</b></div>
+            <div id="co">Player O<b id="so">0</b></div>
+        </div>
+        <p id="status" aria-live="polite"></p>
+        <div id="board" role="grid" aria-label="Tic Tac Toe board"></div>
+        <div class="actions"><button id="next">New round</button><button id="reset">Reset scores</button></div>
+    </main>
+    <script>
+        const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+        const boardEl = document.getElementById('board'), statusEl = document.getElementById('status');
+        const ICON = { X: '<svg viewBox="0 0 100 100"><path d="M22 22L78 78M78 22L22 78"/></svg>', O: '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30"/></svg>' };
+        let cells = [], state, turn, starter = 'X', over, cpu = false, snd = true, ac, score = { X: 0, O: 0, D: 0 };
+        for (let i = 0; i < 9; i++) { const b = document.createElement('button'); b.className = 'cell'; b.addEventListener('click', () => { if (!(cpu && turn === 'O')) play(i) }); boardEl.appendChild(b); cells.push(b) }
+        // sound
+        function beep(f, d = .12, t = 'square') { if (!snd) return; try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(); o.type = t; o.frequency.value = f; g.gain.value = .05; o.connect(g); g.connect(ac.destination); o.start(); g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + d); o.stop(ac.currentTime + d) } catch (e) { } }
+        // game
+        function turnUI() { cx.className = !over && turn === 'X' ? 'ax' : ''; co.className = !over && turn === 'O' ? 'ao' : '' }
+        function newRound() {
+            state = Array(9).fill(''); turn = starter; over = false;
+            cells.forEach((c, i) => { c.innerHTML = ''; c.className = 'cell'; c.disabled = false; c.setAttribute('aria-label', 'Square ' + (i + 1) + ', empty') });
+            statusEl.textContent = "PLAYER " + turn + "'S TURN"; turnUI();
+            starter = starter === 'X' ? 'O' : 'X';
+            if (cpu && turn === 'O') setTimeout(cpuPlay, 450);
+        }
+        function play(i) {
+            if (over || state[i]) return;
+            state[i] = turn; const c = cells[i]; c.innerHTML = ICON[turn]; c.classList.add(turn); c.disabled = true; c.setAttribute('aria-label', 'Square ' + (i + 1) + ', ' + turn);
+            beep(turn === 'X' ? 440 : 330);
+            const win = lines.find(l => l.every(k => state[k] === turn));
+            if (win) { over = true; score[turn]++; win.forEach(k => cells[k].classList.add('win')); statusEl.textContent = 'PLAYER ' + turn + ' WINS!';[523, 659, 784, 1047].forEach((f, n) => setTimeout(() => beep(f, .18), n * 110)); burst() }
+            else if (state.every(Boolean)) { over = true; score.D++; statusEl.textContent = "IT'S A DRAW"; beep(180, .4, 'sawtooth') }
+            else { turn = turn === 'X' ? 'O' : 'X'; statusEl.textContent = "PLAYER " + turn + "'S TURN"; if (cpu && turn === 'O') setTimeout(cpuPlay, 450) }
+            if (over) cells.forEach(k => k.disabled = true);
+            turnUI(); sx.textContent = score.X; so.textContent = score.O; sd.textContent = score.D;
+        }
+        // unbeatable CPU (minimax) plays O
+        function winner(s) { for (const [a, b, c] of lines) if (s[a] && s[a] === s[b] && s[a] === s[c]) return s[a]; return null }
+        function mm(s, p) { const w = winner(s); if (w) return w === 'O' ? 1 : -1; if (s.every(Boolean)) return 0; let best = p === 'O' ? -2 : 2; for (let i = 0; i < 9; i++)if (!s[i]) { s[i] = p; const v = mm(s, p === 'X' ? 'O' : 'X'); s[i] = ''; best = p === 'O' ? Math.max(best, v) : Math.min(best, v) } return best }
+        function cpuPlay() { if (over || !cpu || turn !== 'O') return; let bi = -1, bv = -2; for (let i = 0; i < 9; i++)if (!state[i]) { state[i] = 'O'; const v = mm(state, 'X'); state[i] = ''; if (v > bv) { bv = v; bi = i } } play(bi) }
+        // controls
+        function setMode(c) { cpu = c; m2.setAttribute('aria-pressed', !c); mc.setAttribute('aria-pressed', c); score = { X: 0, O: 0, D: 0 }; starter = 'X'; newRound(); sx.textContent = so.textContent = sd.textContent = 0; so.previousSibling.textContent = c ? 'CPU' : 'Player O' }
+        m2.onclick = () => setMode(false); mc.onclick = () => setMode(true);
+        document.getElementById('snd').onclick = e => { snd = !snd; e.currentTarget.setAttribute('aria-pressed', snd); e.currentTarget.textContent = snd ? '\u{1F50A}' : '\u{1F507}' };
+        next.onclick = newRound;
+        reset.onclick = () => setMode(cpu);
+        // confetti
+        const cv = document.getElementById('fx'), g = cv.getContext('2d'); let bits = [];
+        function fit() { cv.width = innerWidth; cv.height = innerHeight } fit(); addEventListener('resize', fit);
+        function burst() { if (matchMedia('(prefers-reduced-motion:reduce)').matches) return; const cols = ['#FFE14D', '#FF3EA5', '#2BE3FF', '#fff']; for (let i = 0; i < 120; i++)bits.push({ x: innerWidth / 2, y: innerHeight / 2, vx: (Math.random() - .5) * 14, vy: Math.random() * -13 - 2, s: Math.random() * 7 + 3, c: cols[i % 4], l: 90 + Math.random() * 40 }); if (bits.length === 120) loop() }
+        function loop() { g.clearRect(0, 0, cv.width, cv.height); bits = bits.filter(b => b.l-- > 0); for (const b of bits) { b.x += b.vx; b.y += b.vy; b.vy += .35; g.fillStyle = b.c; g.fillRect(b.x, b.y, b.s, b.s) } if (bits.length) requestAnimationFrame(loop); else g.clearRect(0, 0, cv.width, cv.height) }
+        newRound();
+    </script>
+</body>
+
+</html>
